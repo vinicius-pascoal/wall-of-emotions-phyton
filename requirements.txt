@@ -1,0 +1,4 @@
+opencv-python>=4.8,<5
+pygame-ce>=2.5.0
+numpy>=1.23
+pandas>=1.5

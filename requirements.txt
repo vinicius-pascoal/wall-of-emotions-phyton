@@ -1,5 +1,6 @@
-opencv-python>=4.8,<5
+opencv-python<5,>=4.8
 pygame-ce>=2.5.0
 numpy>=1.23
 pandas>=1.5
 py-feat==0.6.2
+matplotlib==3.8.4

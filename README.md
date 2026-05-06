@@ -28,22 +28,32 @@ Nesta versão, o jogador precisa fazer a expressão facial sorteada antes que a 
 
 ## Requisitos recomendados
 
-- Python 3.10 ou 3.11.
+- Python 3.11 (recomendado e testado). Python 3.10 ou 3.12 podem funcionar, mas 3.11 é a versão recomendada para evitar problemas de compatibilidade com dependências nativas.
 - Webcam funcional.
 - Boa iluminação no rosto.
 - Internet na primeira execução, pois o Py-Feat pode baixar modelos automaticamente.
 
 ## Instalação manual
 
+Use preferencialmente o Python 3.11. No Windows recomenda-se o `py` launcher; no Linux/macOS use `python3.11` se disponível.
+
 ```bash
-python -m venv .venv
+# Windows (recomendado)
+py -3.11 -m venv .venv
+
+# Linux/macOS (se tiver python3.11 instalado)
+python3.11 -m venv .venv
 ```
 
 ### Windows
 
 ```bash
-.venv\Scripts\activate
-python -m pip install --upgrade pip
+# Ative o virtualenv criado com o Python 3.11
+.venv\Scripts\Activate.ps1    # PowerShell
+# ou
+.venv\Scripts\activate       # cmd
+
+python -m pip install --upgrade pip setuptools wheel
 pip install -r requirements.txt
 python main.py
 ```
@@ -51,8 +61,10 @@ python main.py
 ### Linux/macOS
 
 ```bash
+# Ative o virtualenv criado com python3.11
 source .venv/bin/activate
-python -m pip install --upgrade pip
+
+python -m pip install --upgrade pip setuptools wheel
 pip install -r requirements.txt
 python main.py
 ```

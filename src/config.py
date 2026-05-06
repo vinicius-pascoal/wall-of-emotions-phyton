@@ -7,9 +7,9 @@ CAMERA_INDEX = 0
 
 # O Py-Feat é mais pesado que um detector simples de OpenCV.
 # Por isso, a inferência acontece em intervalos e o jogo usa o último resultado.
-DETECTION_INTERVAL_SECONDS = 0.80
-DETECTION_MAX_WIDTH = 640
-FACE_LOST_GRACE_SECONDS = 0.40
+DETECTION_INTERVAL_SECONDS = 0.4
+DETECTION_MAX_WIDTH = 1000
+FACE_LOST_GRACE_SECONDS = 0.80
 
 INITIAL_LIVES = 3
 INITIAL_ROUND_DURATION = 6.0
@@ -20,12 +20,22 @@ POINTS_PER_HIT = 100
 
 # Py-Feat retorna emoções tipicamente entre 0.0 e 1.0.
 # Ajuste estes valores depois de testar com sua webcam/iluminação.
+# Se existir .training_data.json, os thresholds personalizados serão usados
 THRESHOLDS = {
     "happiness": 0.55,
     "disgust": 0.35,
     "surprise": 0.45,
     "neutral": 0.45,
 }
+
+# Carregar thresholds personalizados se existirem
+try:
+    from .training_config import TrainingConfig
+    custom_thresholds = TrainingConfig.get_thresholds()
+    if custom_thresholds:
+        THRESHOLDS = custom_thresholds
+except Exception:
+    pass  # Usar thresholds padrão se houver erro
 
 BACKGROUND_COLOR = (10, 14, 22)
 PANEL_COLOR = (17, 24, 39)

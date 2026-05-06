@@ -1,0 +1,39 @@
+{
+  "thresholds": {
+    "Smile": 0.2,
+    "Disgust": 0.23071428571428615,
+    "Surprise": 0.2
+  },
+  "sessions": [
+    {
+      "target": "Smile",
+      "average_scores": {
+        "happiness": 0.09999999999999983,
+        "disgust": 0.1791208791208789,
+        "surprise": 0.5549450549450557,
+        "neutral": 0.16593406593406573
+      },
+      "num_samples": 91
+    },
+    {
+      "target": "Disgust",
+      "average_scores": {
+        "happiness": 0.35054945054945036,
+        "disgust": 0.27142857142857196,
+        "surprise": 0.1989010989010986,
+        "neutral": 0.1791208791208789
+      },
+      "num_samples": 91
+    },
+    {
+      "target": "Surprise",
+      "average_scores": {
+        "happiness": 0.09999999999999983,
+        "disgust": 0.09999999999999983,
+        "surprise": 0.09999999999999983,
+        "neutral": 0.7000000000000012
+      },
+      "num_samples": 90
+    }
+  ]
+}

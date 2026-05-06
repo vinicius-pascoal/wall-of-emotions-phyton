@@ -15,6 +15,7 @@ Nesta versão, o jogador precisa fazer a expressão facial sorteada antes que a 
 
 ## Mecânicas implementadas
 
+- **Menu principal** com opções de jogar ou calibrar.
 - Sorteio de expressão alvo por rodada.
 - Parede se aproximando visualmente.
 - Validação por threshold da emoção alvo.
@@ -22,6 +23,7 @@ Nesta versão, o jogador precisa fazer a expressão facial sorteada antes que a 
 - Pausa da rodada quando não há rosto detectado.
 - Score, vidas, tempo, combo e número da rodada.
 - Tela de game over.
+- **Modo de treinamento para calibração de expressões.**
 - Reinício com `R`.
 - Debug das emoções com `D`.
 - Sair com `ESC`.
@@ -90,9 +92,46 @@ chmod +x run_linux_mac.sh
 
 | Tecla | Ação |
 |---|---|
-| `D` | Mostrar/ocultar debug das emoções |
-| `R` | Reiniciar depois do game over |
-| `ESC` | Sair |
+| **↑ ↓** | Navegar no menu |
+| **ENTER / SPACE** | Selecionar opção do menu |
+| **T** | Entrar no modo de treinamento (durante o jogo) |
+| **D** | Mostrar/ocultar debug das emoções |
+| **R** | Reiniciar depois do game over (volta ao menu) |
+| **ESC** | Voltar ao menu / Sair |
+
+## � Menu Principal
+
+Ao iniciar o jogo, você verá o **menu principal** com duas opções:
+
+### 1. 🎮 JOGAR
+Inicia o jogo normal. Faça as expressões sorteadas antes que a parede chegue ao final da tela.
+
+### 2. ⚙️ CALIBRAR  
+Entra no **modo de treinamento** para otimizar a detecção de expressões com sua webcam e ambiente.
+
+**Dica:** Se a precisão está baixa, faça o treinamento primeiro! Pode melhorar muito.
+
+O **modo de treinamento** ajuda a melhorar a precisão da detecção calibrando os thresholds com suas expressões específicas.
+
+### Como usar:
+
+1. **Inicie o jogo e pressione `T`** para entrar no modo de treinamento
+2. **Pressione `SPACE`** para começar
+3. **O jogo pedirá para fazer cada expressão por ~3 segundos:**
+   - Smile / Sorria
+   - Disgust / Nojo
+   - Surprise / Surpresa
+4. **Após coletar amostras**, o sistema recomendará thresholds otimizados
+5. **Pressione `SPACE` para salvar** ou `ESC` para descartar
+
+Os thresholds personalizados são salvos em `.training_data.json` e usados automaticamente nas próximas execuções.
+
+### Por que fazer treinamento?
+
+- Cada webcam/iluminação é diferente
+- Expressões faciais variam por pessoa
+- Thresholds personalizados **aumentam significativamente a precisão**
+- O treinamento leva apenas ~15 segundos!
 
 ## Escolher outra webcam
 

@@ -41,9 +41,18 @@ class TrainingConfig:
             # Converter de volta para o formato esperado
             result = {}
             for emotion_name, value in thresholds.items():
-                # Mapear de volta para as chaves esperadas
+                # Mapear de volta para as chaves esperadas (aceitar mais emoções)
                 emotion_key = emotion_name.lower()
-                if emotion_key in ["happiness", "disgust", "surprise", "neutral"]:
+                if emotion_key in [
+                    "happiness",
+                    "disgust",
+                    "surprise",
+                    "neutral",
+                    "anger",
+                    "sadness",
+                    "fear",
+                    "contempt",
+                ]:
                     result[emotion_key] = float(value)
 
             if result:

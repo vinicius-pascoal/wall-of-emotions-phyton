@@ -15,7 +15,7 @@ from typing import Dict, List
 
 from . import config
 from .expression_reader import PyFeatExpressionReader
-from .expression_target import ACTIVE_TARGETS, ExpressionTarget
+from .expression_target import ACTIVE_TARGETS, ExpressionTarget, TARGET_TO_EMOTION_COLUMN
 
 
 class TrainingPhase(Enum):
@@ -145,26 +145,27 @@ class TrainingManager:
     def _calculate_recommendations(self) -> Dict[str, float]:
         """Calcula thresholds recomendados baseado nas amostras."""
         recommendations = {}
-
         for session in self.sessions:
             avg_scores = session.average_scores()
-            target_emotion = session.target.value.lower()
+
+            # Mapear o target para a coluna de emoção usada no detector
+            emotion_column = TARGET_TO_EMOTION_COLUMN.get(session.target)
+            if emotion_column is None:
+                continue
 
             # Usar a média como threshold, com margem de segurança
-            target_score = avg_scores.get(target_emotion, 0.0)
+            target_score = avg_scores.get(emotion_column, 0.0)
             # Reduzir um pouco para ser mais permissivo, mas não demais
             recommended = max(0.2, target_score * 0.85)
-            recommendations[session.target] = recommended
+            recommendations[emotion_column] = recommended
 
         return recommendations
 
     def save_training_data(self) -> None:
         """Salva dados de treinamento e thresholds personalizados."""
         data = {
-            "thresholds": {
-                target.value: score
-                for target, score in self.recommendations.items()
-            },
+            # Salvar thresholds com as chaves das colunas de emoção (e.g. 'happiness')
+            "thresholds": {k: float(v) for k, v in self.recommendations.items()},
             "sessions": [
                 {
                     "target": s.target.value,

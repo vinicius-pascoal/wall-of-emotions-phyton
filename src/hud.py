@@ -19,7 +19,7 @@ class Hud:
         self.font_medium = pygame.font.SysFont("Arial", 34, bold=True)
         self.font_big = pygame.font.SysFont("Arial", 56, bold=True)
 
-    def draw(self, screen, game: GameManager, snapshot: EmotionSnapshot, frame_bgr, show_debug: bool) -> None:
+    def draw(self, screen, game: GameManager, snapshot: EmotionSnapshot, frame_bgr, show_debug: bool, expression_reader=None) -> None:
         if game.phase == GamePhase.MENU:
             self._draw_main_menu(screen, game, frame_bgr)
             return
@@ -32,7 +32,7 @@ class Hud:
         self._draw_target_panel(screen, game.current_target)
         self._draw_feedback(screen, game, snapshot)
         self._draw_camera_preview(screen, frame_bgr)
-        self._draw_bottom_bar(screen, snapshot, show_debug)
+        self._draw_bottom_bar(screen, snapshot, show_debug, expression_reader)
 
         if game.phase == GamePhase.GAME_OVER:
             self._draw_game_over(screen, game)
@@ -113,10 +113,32 @@ class Hud:
         self._draw_panel(screen, border_rect, border_radius=12)
         screen.blit(surface, (x, y))
 
-    def _draw_bottom_bar(self, screen, snapshot: EmotionSnapshot, show_debug: bool):
+    def _draw_bottom_bar(self, screen, snapshot: EmotionSnapshot, show_debug: bool, expression_reader=None):
         rect = pygame.Rect(20, self.screen_height - 112,
                            self.screen_width - 330, 88)
         self._draw_panel(screen, rect)
+        # Mostrar status do detector (py-feat ou fallback)
+        detector_label = "Detector: unknown"
+        try:
+            if expression_reader is not None and hasattr(expression_reader, "get_detector_name"):
+                name = expression_reader.get_detector_name()
+                active = expression_reader.is_pyfeat_active()
+                detector_label = f"Detector: {name} {'(py-feat)' if active else '(fallback)'}"
+        except Exception:
+            detector_label = "Detector: error"
+
+        self._draw_text(screen, self.font_small, detector_label,
+                        36, self.screen_height - 36, config.TEXT_MUTED_COLOR)
+        # Mostrar erro de carregamento do detector (se existir)
+        try:
+            if expression_reader is not None and hasattr(expression_reader, "get_load_error"):
+                load_err = expression_reader.get_load_error()
+                if load_err:
+                    short = load_err.splitlines()[0]
+                    self._draw_text(
+                        screen, self.font_small, f"py-feat error: {short}", 36, self.screen_height - 18, config.ERROR_COLOR)
+        except Exception:
+            pass
 
         face_status = "Rosto detectado" if snapshot.face_visible_with_grace() else "Sem rosto"
         processing_status = "Processando..." if snapshot.processing else "Pronto"
@@ -130,10 +152,10 @@ class Hud:
 
         if show_debug:
             debug = (
-                f"happiness={snapshot.score('happiness'):.2f}  "
-                f"disgust={snapshot.score('disgust'):.2f}  "
-                f"surprise={snapshot.score('surprise'):.2f}  "
-                f"neutral={snapshot.score('neutral'):.2f}"
+                f"happiness={snapshot.scores.get('happiness', 0.0):.2f}  "
+                f"disgust={snapshot.scores.get('disgust', 0.0):.2f}  "
+                f"surprise={snapshot.scores.get('surprise', 0.0):.2f}  "
+                f"neutral={snapshot.scores.get('neutral', 0.0):.2f}"
             )
             self._draw_text(screen, self.font_small, debug, 42,
                             self.screen_height - 62, config.TEXT_MUTED_COLOR)
@@ -236,10 +258,10 @@ class Hud:
         # Mostrar scores se estiver registrando
         if training.phase in (TrainingPhase.RECORDING, TrainingPhase.ANALYZING):
             scores_text = (
-                f"happiness={snapshot.score('happiness'):.2f}  "
-                f"disgust={snapshot.score('disgust'):.2f}  "
-                f"surprise={snapshot.score('surprise'):.2f}  "
-                f"neutral={snapshot.score('neutral'):.2f}"
+                f"happiness={snapshot.scores.get('happiness', 0.0):.2f}  "
+                f"disgust={snapshot.scores.get('disgust', 0.0):.2f}  "
+                f"surprise={snapshot.scores.get('surprise', 0.0):.2f}  "
+                f"neutral={snapshot.scores.get('neutral', 0.0):.2f}"
             )
             self._draw_center_text(
                 screen, self.font_small, scores_text, 615, config.TEXT_MUTED_COLOR)
@@ -251,8 +273,26 @@ class Hud:
                 screen, self.font_small, rec_text, 615, config.TEXT_MUTED_COLOR)
 
             y_offset = 0
+            # recommendations keys may be ExpressionTarget enums or emotion column strings
+            from .expression_target import TARGET_TO_EMOTION_COLUMN
+
+            # invert mapping: emotion_column -> ExpressionTarget
+            inverse_map = {v: k for k, v in TARGET_TO_EMOTION_COLUMN.items()}
+
             for target, score in training.recommendations.items():
-                rec_line = f"{target.value}: {score:.2f}"
+                # Determinar label de exibição
+                if hasattr(target, "value"):
+                    label = TARGET_LABELS_PT.get(target, str(target.value))
+                elif isinstance(target, str):
+                    enum_key = inverse_map.get(target)
+                    if enum_key is not None:
+                        label = TARGET_LABELS_PT.get(enum_key, target.title())
+                    else:
+                        label = target.title()
+                else:
+                    label = str(target)
+
+                rec_line = f"{label}: {score:.2f}"
                 self._draw_center_text(
                     screen, self.font_small, rec_line, 645 + y_offset, config.SUCCESS_COLOR)
                 y_offset += 25

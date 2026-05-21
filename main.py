@@ -97,6 +97,14 @@ def main() -> int:
                 elif event.key == pygame.K_t and not game.is_in_training():
                     # Entrar em modo de treinamento
                     game.enter_training_mode()
+                elif event.key == pygame.K_p:
+                    # Tentar recarregar o py-feat Detector em tempo de execução
+                    reloaded = expression_reader.try_reload_detector()
+                    if reloaded:
+                        print("[Main] py-feat recarregado com sucesso.")
+                    else:
+                        print(
+                            "[Main] Falha ao recarregar py-feat. Veja logs acima para detalhes.")
                 elif event.key == pygame.K_SPACE and game.is_in_training():
                     # Iniciar treinamento ou salvar dados
                     from src.training_mode import TrainingPhase
@@ -126,7 +134,8 @@ def main() -> int:
             wall.draw(screen, game.current_target,
                       game.get_wall_progress(), hud.font_medium)
 
-        hud.draw(screen, game, snapshot, latest_frame, show_debug)
+        hud.draw(screen, game, snapshot, latest_frame,
+                 show_debug, expression_reader)
         pygame.display.flip()
 
     camera.release()

@@ -26,6 +26,11 @@ THRESHOLDS = {
     "disgust": 0.35,
     "surprise": 0.45,
     "neutral": 0.45,
+    # Emotions adicionais com valores padrão razoáveis
+    "anger": 0.40,
+    "sadness": 0.40,
+    "fear": 0.40,
+    "contempt": 0.40,
 }
 
 # Carregar thresholds personalizados se existirem

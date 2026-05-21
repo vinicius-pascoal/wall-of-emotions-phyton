@@ -10,15 +10,30 @@ import os
 import tempfile
 import threading
 import time
+from contextlib import nullcontext
 from dataclasses import dataclass, field
 from typing import Dict, Optional
+import sys
+import importlib
+import importlib.util
+import traceback
 
 import cv2
 
 from . import config
 from .expression_target import ExpressionTarget, TARGET_TO_EMOTION_COLUMN
 
-EMOTION_COLUMNS = ("happiness", "disgust", "surprise", "neutral")
+EMOTION_COLUMNS = (
+    "happiness",
+    "disgust",
+    "surprise",
+    "neutral",
+    # Emotions adicionais comumente retornadas por detectores
+    "anger",
+    "sadness",
+    "fear",
+    "contempt",
+)
 
 
 class DummyDetector:
@@ -60,19 +75,26 @@ class DummyDetector:
             self.last_face_size = face_size
 
             # Ciclar expressões com variação baseada em movimento
-            emotions = ["happiness", "surprise", "neutral", "disgust"]
+            emotions = [
+                "happiness",
+                "surprise",
+                "neutral",
+                "disgust",
+                "anger",
+                "sadness",
+                "fear",
+                "contempt",
+            ]
             if size_change > 0.1:  # mudança significativa = emoção muda
                 self.emotion_counter = (
                     self.emotion_counter + 1) % len(emotions)
             self.last_emotion = emotions[self.emotion_counter]
 
             # Criar resultado com scores
-            scores = {
-                "happiness": 0.7 if self.last_emotion == "happiness" else 0.1,
-                "surprise": 0.7 if self.last_emotion == "surprise" else 0.1,
-                "neutral": 0.7 if self.last_emotion == "neutral" else 0.1,
-                "disgust": 0.7 if self.last_emotion == "disgust" else 0.1,
-            }
+            # Construir scores para todas as colunas suportadas
+            scores = {}
+            for e in EMOTION_COLUMNS:
+                scores[e] = 0.7 if self.last_emotion == e else 0.05
 
             # Retornar DataFrame similar ao py-feat
             result_df = pd.DataFrame([scores])
@@ -107,6 +129,10 @@ class EmotionSnapshot:
             "disgust": 0.0,
             "surprise": 0.0,
             "neutral": 0.0,
+            "anger": 0.0,
+            "sadness": 0.0,
+            "fear": 0.0,
+            "contempt": 0.0,
         }
     )
     detected_expression: str = "none"
@@ -123,6 +149,7 @@ class EmotionSnapshot:
         return (time.time() - self.last_face_timestamp) <= config.FACE_LOST_GRACE_SECONDS
 
     def score(self, emotion_column: str) -> float:
+        """Compatibilidade: retorna o score para a coluna de emoção dada."""
         return float(self.scores.get(emotion_column, 0.0))
 
 
@@ -133,24 +160,50 @@ class PyFeatExpressionReader:
         self.snapshot = EmotionSnapshot()
         self.last_submit_timestamp = 0.0
         self._detector = None
+        self._using_pyfeat = False
+        self._module_name: Optional[str] = None
         self._load_error: Optional[str] = None
         self._load_detector()
 
     def _load_detector(self) -> None:
-        try:
-            from feat import Detector
+        candidate_names = ["feat", "pyfeat", "py_feat"]
+        found_mod = None
+        for name in candidate_names:
+            if importlib.util.find_spec(name) is not None:
+                try:
+                    found_mod = importlib.import_module(name)
+                    self._module_name = name
+                    break
+                except Exception as e:
+                    self._load_error = f"Erro ao importar módulo '{name}': {e}\n" + traceback.format_exc(
+                    )
 
-            print(
-                "[Py-Feat] Carregando Detector. Na primeira execução, os modelos podem ser baixados...")
-            self._detector = Detector()
-            print("[Py-Feat] Detector carregado com sucesso.")
-        except Exception as exc:  # pragma: no cover - depende do ambiente local
-            self._load_error = str(exc)
-            print("[Py-Feat] Erro ao carregar Detector:", exc)
-            print(
-                "[OpenCV] Usando modo alternativo - detecção de expressões com OpenCV Haar Cascades")
-            # Usar um detector inteligente baseado em OpenCV
+        if found_mod is None:
+            print("[Py-Feat] Módulo 'feat' não encontrado. Usando fallback OpenCV.")
             self._detector = DummyDetector()
+            self._using_pyfeat = False
+            with self.lock:
+                self.snapshot.error_message = (
+                    "Modo alternativo: Detecção de faces com OpenCV (sem reconhecimento profundo de expressões)"
+                )
+            return
+
+        try:
+            Detector = getattr(found_mod, "Detector", None)
+            if Detector is None:
+                raise ImportError("Módulo importado não contém 'Detector'.")
+
+            print("[Py-Feat] Carregando Detector...")
+            self._detector = Detector()
+            self._using_pyfeat = True
+            self._load_error = None
+            print("[Py-Feat] Detector carregado com sucesso.")
+        except Exception as exc:
+            self._using_pyfeat = False
+            self._detector = DummyDetector()
+            self._load_error = f"Erro ao inicializar Detector do módulo '{self._module_name}': {exc}\n" + traceback.format_exc(
+            )
+            print("[Py-Feat] Erro ao inicializar Detector:\n", self._load_error)
             with self.lock:
                 self.snapshot.error_message = (
                     "Modo alternativo: Detecção de faces com OpenCV (sem reconhecimento profundo de expressões)"
@@ -183,6 +236,47 @@ class PyFeatExpressionReader:
         new_size = (config.DETECTION_MAX_WIDTH, int(height * scale))
         return cv2.resize(frame_bgr, new_size)
 
+    def _run_detector_on_image(self, image_path: str):
+        """Executa inferência de imagem usando a API disponível do detector.
+
+        O py-feat real expõe `detect_image()`, enquanto o fallback local expõe `detect()`.
+        """
+        if self._detector is None:
+            return None
+
+        if hasattr(self._detector, "detect_image"):
+            method = getattr(self._detector, "detect_image")
+            try:
+                try:
+                    import torch
+
+                    inference_ctx = torch.inference_mode()
+                except Exception:
+                    inference_ctx = nullcontext()
+
+                with inference_ctx:
+                    return method(
+                        [image_path],
+                        output_size=700,
+                        batch_size=1,
+                        num_workers=0,
+                        pin_memory=False,
+                    )
+            except TypeError:
+                # Algumas versões aceitam apenas o path como posicional, sem kwargs.
+                with nullcontext():
+                    return method([image_path])
+
+        if hasattr(self._detector, "detect"):
+            method = getattr(self._detector, "detect")
+            try:
+                return method(image_path, data_type="image")
+            except TypeError:
+                return method(image_path)
+
+        raise AttributeError(
+            f"'{self._detector.__class__.__name__}' object has no supported image inference method")
+
     def _detect_async(self, frame_bgr) -> None:
         temp_path = None
         try:
@@ -190,11 +284,11 @@ class PyFeatExpressionReader:
                 temp_path = temp_file.name
 
             cv2.imwrite(temp_path, frame_bgr)
-            result = self._detector.detect(temp_path, data_type="image")
+            result = self._run_detector_on_image(temp_path)
             new_snapshot = self._snapshot_from_result(result)
             self._set_snapshot(new_snapshot)
 
-        except Exception as exc:  # pragma: no cover - depende do ambiente local
+        except Exception as exc:
             previous = self.get_snapshot()
             previous.has_face = False
             previous.error_message = f"Erro na detecção: {exc}"
@@ -271,6 +365,75 @@ class PyFeatExpressionReader:
         except Exception:
             pass
         return emotions_df.index[0]
+
+    def _set_snapshot(self, snapshot: EmotionSnapshot) -> None:
+        with self.lock:
+            snapshot.processing = self.snapshot.processing
+            self.snapshot = snapshot
+
+    def get_snapshot(self) -> EmotionSnapshot:
+        with self.lock:
+            return EmotionSnapshot(
+                has_face=self.snapshot.has_face,
+                scores=dict(self.snapshot.scores),
+                detected_expression=self.snapshot.detected_expression,
+                processing=self.snapshot.processing,
+                error_message=self.snapshot.error_message,
+                last_face_timestamp=self.snapshot.last_face_timestamp,
+                last_detection_timestamp=self.snapshot.last_detection_timestamp,
+            )
+
+    def is_pyfeat_active(self) -> bool:
+        return bool(self._using_pyfeat and self._detector is not None)
+
+    def get_detector_name(self) -> str:
+        if self._detector is None:
+            return "none"
+        try:
+            return self._detector.__class__.__name__
+        except Exception:
+            return str(type(self._detector))
+
+    def get_load_error(self) -> Optional[str]:
+        return self._load_error
+
+    def try_reload_detector(self) -> bool:
+        if self.is_pyfeat_active():
+            return True
+        if self._module_name is None:
+            self._load_detector()
+            return self.is_pyfeat_active()
+        try:
+            mod = importlib.import_module(self._module_name)
+            Detector = getattr(mod, "Detector", None)
+            if Detector is None:
+                self._load_error = f"Módulo '{self._module_name}' não possui 'Detector'."
+                return False
+            self._detector = Detector()
+            self._using_pyfeat = True
+            self._load_error = None
+            print("[Py-Feat] Detector recarregado com sucesso.")
+            return True
+        except Exception as exc:
+            self._using_pyfeat = False
+            self._detector = DummyDetector()
+            self._load_error = f"Erro ao recarregar Detector: {exc}\n" + traceback.format_exc(
+            )
+            print("[Py-Feat] Erro ao recarregar Detector:\n", self._load_error)
+            return False
+
+    def is_matching_target(self, target: ExpressionTarget) -> bool:
+        snapshot = self.get_snapshot()
+        if not snapshot.face_visible_with_grace():
+            return False
+        if target == ExpressionTarget.NEUTRAL:
+            return (
+                snapshot.score("happiness") < config.THRESHOLDS["happiness"]
+                and snapshot.score("disgust") < config.THRESHOLDS["disgust"]
+                and snapshot.score("surprise") < config.THRESHOLDS["surprise"]
+            )
+        column = TARGET_TO_EMOTION_COLUMN[target]
+        return snapshot.score(column) >= config.THRESHOLDS[column]
 
     def _set_snapshot(self, snapshot: EmotionSnapshot) -> None:
         with self.lock:

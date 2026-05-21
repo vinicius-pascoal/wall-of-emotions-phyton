@@ -56,8 +56,19 @@ python3.11 -m venv .venv
 .venv\Scripts\activate       # cmd
 
 python -m pip install --upgrade pip setuptools wheel
+\
+# Instalação recomendada (passo-a-passo)
+pip install --upgrade pip setuptools wheel
+# Instala as dependências principais listadas no requirements
 pip install -r requirements.txt
-python main.py
+
+# Se houver problemas com o Py-Feat / torch, instale estas versões testadas (CPU)
+pip install torch==2.4.1+cpu torchvision==0.19.1+cpu -f https://download.pytorch.org/whl/cpu/torch_stable.html
+pip install numpy==1.23.5 scipy==1.13.1
+pip install py-feat==0.6.2
+
+# Execute o jogo usando o Python do .venv
+.venv\Scripts\python.exe main.py
 ```
 
 ### Linux/macOS
@@ -68,7 +79,69 @@ source .venv/bin/activate
 
 python -m pip install --upgrade pip setuptools wheel
 pip install -r requirements.txt
-python main.py
+
+# Se houver problemas com o Py-Feat / torch (Apple Silicon ou incompatibilidades), siga as instruções específicas do PyTorch
+# e do Py-Feat. Para CPUs Intel/macOS padrão, instale:
+pip install numpy==1.23.5 scipy==1.13.1 py-feat==0.6.2
+
+python3 -m pip install --upgrade pip
+python3 main.py
+```
+
+## Instalação detalhada / resolução de dependências (Py-Feat)
+
+O Py-Feat depende de `torch`/`torchvision` e de versões compatíveis de `numpy` e `scipy`. Se durante `import feat` você vir erros como "cannot import name 'read_video' from 'torchvision.io'" ou mensagens sobre DLLs, tente alinhar as versões do `torch` e `torchvision` conforme abaixo.
+
+Windows (CPU) — comandos testados nesta base:
+
+```powershell
+py -3.11 -m venv .venv
+.venv\Scripts\Activate.ps1
+pip install --upgrade pip setuptools wheel
+pip install torch==2.4.1+cpu torchvision==0.19.1+cpu -f https://download.pytorch.org/whl/cpu/torch_stable.html
+pip install numpy==1.23.5 scipy==1.13.1
+pip install py-feat==0.6.2
+pip install opencv-python pygame-ce pandas matplotlib
+```
+
+Observações:
+- Se você usa GPU/CUDA, instale a versão do `torch`/`torchvision` adequada ao seu CUDA seguindo as instruções oficiais do PyTorch.
+- Em Macs com Apple Silicon pode ser necessário compilar ou usar wheels específicos (ver documentação do PyTables/Py-Feat). Em caso de dificuldades, considere usar uma environment baseada em `conda`.
+
+## Verificando o Py-Feat
+
+Para testar rapidamente se o `py-feat` foi instalado corretamente:
+
+```bash
+.venv\Scripts\python.exe -c "import feat; print('py-feat', feat.__version__)"
+```
+
+No jogo, o HUD exibe o nome do detector (por exemplo `feat.Detector`) e, em caso de falha, a primeira linha do erro de carregamento. Também é possível pressionar `P` durante a execução para tentar recarregar o detector em tempo de execução.
+
+## Solução de problemas comuns
+
+- Erro ao importar `feat` (ex.: "cannot import name 'read_video' from 'torchvision.io'"): verifique se `torch` e `torchvision` são compatíveis. Reinstale conforme "Instalação detalhada".
+- Erro do tipo "Can't call numpy() on Tensor that requires grad": instale as versões recomendadas de `torch`/`torchvision` e garanta que o detector esteja sendo chamado em modo de inferência — esta versão do jogo já faz isso.
+- `ImportError` / DLL load failed no Windows: verifique o Microsoft Visual C++ Redistributable e use o Python do `.venv` (veja `run_windows.bat`).
+- Py-Feat demora na primeira execução: é normal — modelos são baixados/compilados. Aguarde alguns minutos na primeira inicialização.
+
+## Treinamento / calibração
+
+Use o modo de treinamento no jogo (`T`) para calibrar thresholds personalizados. As recomendações são salvas em `.training_data.json` na raiz do projeto e aplicadas automaticamente nas próximas execuções.
+
+## Verificar/alterar câmera e intervalo de inferência
+
+```bash
+python main.py --camera 1
+python main.py --interval 0.5
+```
+
+## Execução direta (alternativa)
+
+Para garantir que o Python correto do virtualenv seja usado no Windows:
+
+```powershell
+.venv\Scripts\python.exe main.py
 ```
 
 ## Execução automática

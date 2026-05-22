@@ -1,39 +1,39 @@
 {
   "thresholds": {
     "happiness": 0.2,
-    "disgust": 0.23019425202810953,
-    "surprise": 0.2
+    "disgust": 0.4999007745852901,
+    "surprise": 0.6076321372832172
   },
   "sessions": [
     {
       "target": "Smile",
       "average_scores": {
-        "happiness": 0.012016879148123896,
-        "disgust": 0.023447212445385317,
-        "surprise": 0.003619138926596326,
-        "neutral": 0.8329015745836146
+        "happiness": 0.005358394512551881,
+        "disgust": 0.02670647137399231,
+        "surprise": 0.013012962909193621,
+        "neutral": 0.8164672014259157
       },
-      "num_samples": 85
+      "num_samples": 84
     },
     {
       "target": "Disgust",
       "average_scores": {
-        "happiness": 0.4142180493863934,
-        "disgust": 0.27081676709189356,
-        "surprise": 0.003534458378063781,
-        "neutral": 0.028407449894175343
+        "happiness": 0.3980515658816633,
+        "disgust": 0.5881185583356354,
+        "surprise": 0.0020808945429356147,
+        "neutral": 0.0018116478665938809
       },
-      "num_samples": 91
+      "num_samples": 90
     },
     {
       "target": "Surprise",
       "average_scores": {
-        "happiness": 0.012610482123608772,
-        "disgust": 0.5046156209248763,
-        "surprise": 0.0016746424998228366,
-        "neutral": 0.006503261518306457
+        "happiness": 0.0023030894045304095,
+        "disgust": 0.21661969987326302,
+        "surprise": 0.7148613379802555,
+        "neutral": 0.01452006222680211
       },
-      "num_samples": 91
+      "num_samples": 90
     }
   ]
 }

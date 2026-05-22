@@ -55,3 +55,16 @@ SMILE_COLOR = (250, 204, 21)
 DISGUST_COLOR = (74, 222, 128)
 SURPRISE_COLOR = (56, 189, 248)
 NEUTRAL_COLOR = (148, 163, 184)
+
+# Estética / tipografia
+# Nome da fonte do sistema a ser usada (None = fonte padrão do pygame)
+FONT_NAME = "Segoe UI"
+# Se quiser embutir uma fonte .ttf no futuro, defina FONT_PATH com um caminho relativo
+FONT_PATH = None
+
+# Bordas arredondadas padrão para painéis
+PANEL_BORDER_RADIUS = 14
+
+# Sombra de texto (cor e deslocamento)
+TEXT_SHADOW_COLOR = (0, 0, 0)
+TEXT_SHADOW_OFFSET = (2, 2)

@@ -14,10 +14,28 @@ class Hud:
     def __init__(self, screen_width: int, screen_height: int):
         self.screen_width = screen_width
         self.screen_height = screen_height
-        self.font_small = pygame.font.SysFont("Arial", 20)
-        self.font_regular = pygame.font.SysFont("Arial", 24)
-        self.font_medium = pygame.font.SysFont("Arial", 34, bold=True)
-        self.font_big = pygame.font.SysFont("Arial", 56, bold=True)
+        font_name = config.FONT_NAME or None
+        # Se houver um PATH de fonte embutida, preferi-la
+        if config.FONT_PATH:
+            try:
+                self.font_small = pygame.font.Font(config.FONT_PATH, 20)
+                self.font_regular = pygame.font.Font(config.FONT_PATH, 24)
+                self.font_medium = pygame.font.Font(config.FONT_PATH, 34)
+                self.font_big = pygame.font.Font(config.FONT_PATH, 56)
+                # Simular negrito quando necessário
+                self.font_medium.set_bold(True)
+                self.font_big.set_bold(True)
+            except Exception:
+                self.font_small = pygame.font.SysFont(font_name, 20)
+                self.font_regular = pygame.font.SysFont(font_name, 24)
+                self.font_medium = pygame.font.SysFont(
+                    font_name, 34, bold=True)
+                self.font_big = pygame.font.SysFont(font_name, 56, bold=True)
+        else:
+            self.font_small = pygame.font.SysFont(font_name, 20)
+            self.font_regular = pygame.font.SysFont(font_name, 24)
+            self.font_medium = pygame.font.SysFont(font_name, 34, bold=True)
+            self.font_big = pygame.font.SysFont(font_name, 56, bold=True)
 
     def draw(self, screen, game: GameManager, snapshot: EmotionSnapshot, frame_bgr, show_debug: bool, expression_reader=None) -> None:
         if game.phase == GamePhase.MENU:
@@ -38,18 +56,27 @@ class Hud:
             self._draw_game_over(screen, game)
 
     def _draw_panel(self, screen, rect, border_radius=14):
+        br = border_radius or config.PANEL_BORDER_RADIUS
         pygame.draw.rect(screen, config.PANEL_COLOR, rect,
-                         border_radius=border_radius)
+                         border_radius=br)
         pygame.draw.rect(screen, config.PANEL_BORDER_COLOR,
-                         rect, width=2, border_radius=border_radius)
+                         rect, width=2, border_radius=br)
 
     def _draw_text(self, screen, font, text, x, y, color=config.TEXT_COLOR):
+        # Desenhar sombra sutil antes do texto para profundidade
+        shadow = font.render(text, True, config.TEXT_SHADOW_COLOR)
+        screen.blit(
+            shadow, (x + config.TEXT_SHADOW_OFFSET[0], y + config.TEXT_SHADOW_OFFSET[1]))
         surface = font.render(text, True, color)
         screen.blit(surface, (x, y))
 
     def _draw_center_text(self, screen, font, text, y, color=config.TEXT_COLOR):
         surface = font.render(text, True, color)
         x = (self.screen_width - surface.get_width()) // 2
+        # sombra centralizada
+        shadow = font.render(text, True, config.TEXT_SHADOW_COLOR)
+        screen.blit(
+            shadow, (x + config.TEXT_SHADOW_OFFSET[0], y + config.TEXT_SHADOW_OFFSET[1]))
         screen.blit(surface, (x, y))
 
     def _draw_top_bar(self, screen, game: GameManager):

@@ -36,6 +36,8 @@ class Hud:
             self.font_regular = pygame.font.SysFont(font_name, 24)
             self.font_medium = pygame.font.SysFont(font_name, 34, bold=True)
             self.font_big = pygame.font.SysFont(font_name, 56, bold=True)
+        # Fontes adicionais
+        self.title_font = pygame.font.SysFont(font_name, 72, bold=True)
 
     def draw(self, screen, game: GameManager, snapshot: EmotionSnapshot, frame_bgr, show_debug: bool, expression_reader=None) -> None:
         if game.phase == GamePhase.MENU:
@@ -57,10 +59,18 @@ class Hud:
 
     def _draw_panel(self, screen, rect, border_radius=14):
         br = border_radius or config.PANEL_BORDER_RADIUS
-        pygame.draw.rect(screen, config.PANEL_COLOR, rect,
-                         border_radius=br)
-        pygame.draw.rect(screen, config.PANEL_BORDER_COLOR,
-                         rect, width=2, border_radius=br)
+        # Sombra: desenhar em surface com alpha e blitar deslocada
+        try:
+            shadow_surf = pygame.Surface((rect.width, rect.height), pygame.SRCALPHA)
+            shadow_surf.fill((0, 0, 0, 0))
+            pygame.draw.rect(shadow_surf, config.PANEL_SHADOW_COLOR, shadow_surf.get_rect(), border_radius=br)
+            screen.blit(shadow_surf, (rect.x + config.PANEL_SHADOW_OFFSET[0], rect.y + config.PANEL_SHADOW_OFFSET[1]))
+        except Exception:
+            # fallback sem sombra
+            pass
+
+        pygame.draw.rect(screen, config.PANEL_COLOR, rect, border_radius=br)
+        pygame.draw.rect(screen, config.PANEL_BORDER_COLOR, rect, width=2, border_radius=br)
 
     def _draw_text(self, screen, font, text, x, y, color=config.TEXT_COLOR):
         # Desenhar sombra sutil antes do texto para profundidade
@@ -78,6 +88,16 @@ class Hud:
         screen.blit(
             shadow, (x + config.TEXT_SHADOW_OFFSET[0], y + config.TEXT_SHADOW_OFFSET[1]))
         screen.blit(surface, (x, y))
+
+    def _draw_vertical_gradient(self, screen, start_color, end_color):
+        # Desenha um gradiente vertical simples sobre toda a tela
+        h = self.screen_height
+        for i in range(h):
+            t = i / max(1, h - 1)
+            r = int(start_color[0] + (end_color[0] - start_color[0]) * t)
+            g = int(start_color[1] + (end_color[1] - start_color[1]) * t)
+            b = int(start_color[2] + (end_color[2] - start_color[2]) * t)
+            pygame.draw.line(screen, (r, g, b), (0, i), (self.screen_width, i))
 
     def _draw_top_bar(self, screen, game: GameManager):
         rect = pygame.Rect(20, 18, self.screen_width - 40, 64)
@@ -326,7 +346,8 @@ class Hud:
 
     def _draw_main_menu(self, screen, game: GameManager, frame_bgr):
         """Renderiza o menu principal."""
-        screen.fill(config.BACKGROUND_COLOR)
+        # Fundo com gradiente sutil
+        self._draw_vertical_gradient(screen, config.MENU_GRADIENT_START, config.MENU_GRADIENT_END)
 
         # Preview da câmera no fundo
         if frame_bgr is not None:
@@ -339,20 +360,16 @@ class Hud:
             surface.set_alpha(40)
             screen.blit(surface, (0, 0))
 
-        # Overlay escuro
-        overlay = pygame.Surface(
-            (self.screen_width, self.screen_height), pygame.SRCALPHA)
-        overlay.fill((0, 0, 0, 120))
+        # Overlay escuro para foco
+        overlay = pygame.Surface((self.screen_width, self.screen_height), pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, 110))
         screen.blit(overlay, (0, 0))
 
         # Título
-        title_font = pygame.font.SysFont("Arial", 72, bold=True)
-        self._draw_center_text(
-            screen, title_font, "🎮 EXPRESSION WALL", 80, config.SUCCESS_COLOR)
-
-        subtitle_font = pygame.font.SysFont("Arial", 28)
-        self._draw_center_text(
-            screen, subtitle_font, "Hole in the Wall com Py-Feat", 160, config.TEXT_MUTED_COLOR)
+        # Título e subtítulo usando fontes configuradas
+        self._draw_center_text(screen, self.title_font, "🎮 EXPRESSION WALL", 80, config.SUCCESS_COLOR)
+        subtitle_font = pygame.font.SysFont(config.FONT_NAME or None, 28)
+        self._draw_center_text(screen, subtitle_font, "Hole in the Wall com Py-Feat", 160, config.TEXT_MUTED_COLOR)
 
         # Opções do menu
         menu_y = 260
@@ -369,21 +386,19 @@ class Hud:
                 70
             )
 
+            # Painel da opção com sombra sutil
+            self._draw_panel(screen, option_rect, border_radius=16)
             if is_selected:
-                color = config.SUCCESS_COLOR
-                pygame.draw.rect(screen, config.PANEL_COLOR,
-                                 option_rect, border_radius=16)
-                pygame.draw.rect(screen, config.SUCCESS_COLOR,
-                                 option_rect, width=4, border_radius=16)
+                color = config.MENU_HIGHLIGHT_COLOR
+                # destaque interno leve
+                inner = option_rect.inflate(-8, -8)
+                pygame.draw.rect(screen, (config.PANEL_COLOR[0] + 6, config.PANEL_COLOR[1] + 6, config.PANEL_COLOR[2] + 6), inner, border_radius=12)
+                pygame.draw.rect(screen, color, (option_rect.x + option_rect.width - 18, option_rect.y + 18, 8, 8), border_radius=2)
             else:
                 color = config.TEXT_COLOR
-                pygame.draw.rect(screen, config.PANEL_COLOR,
-                                 option_rect, border_radius=16)
-                pygame.draw.rect(screen, config.PANEL_BORDER_COLOR,
-                                 option_rect, width=2, border_radius=16)
 
             # Texto da opção
-            option_font = pygame.font.SysFont("Arial", 32, bold=is_selected)
+            option_font = pygame.font.SysFont(config.FONT_NAME or None, 32, bold=is_selected)
             self._draw_center_text(
                 screen, option_font, option, menu_y + i * option_height + 20, color)
 

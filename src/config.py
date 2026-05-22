@@ -68,3 +68,17 @@ PANEL_BORDER_RADIUS = 14
 # Sombra de texto (cor e deslocamento)
 TEXT_SHADOW_COLOR = (0, 0, 0)
 TEXT_SHADOW_OFFSET = (2, 2)
+
+# Paleta e pequenos ajustes de UI para manter estilo minimalista
+MENU_GRADIENT_START = (8, 12, 20)
+MENU_GRADIENT_END = (18, 26, 46)
+
+# Sombra do painel (RGBA)
+PANEL_SHADOW_COLOR = (0, 0, 0, 90)
+PANEL_SHADOW_OFFSET = (6, 6)
+
+# Cor de destaque para opções do menu (leve, minimalista)
+MENU_HIGHLIGHT_COLOR = (88, 197, 153)
+
+# Espaçamento base (px)
+UI_SPACING = 12

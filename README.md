@@ -63,7 +63,7 @@ pip install --upgrade pip setuptools wheel
 pip install -r requirements.txt
 
 # Se houver problemas com o Py-Feat / torch, instale estas versões testadas (CPU)
-pip install torch==2.4.1+cpu torchvision==0.19.1+cpu -f https://download.pytorch.org/whl/cpu/torch_stable.html
+pip install torch==2.4.1 torchvision==0.19.1
 pip install numpy==1.23.5 scipy==1.13.1
 pip install py-feat==0.6.2
 
